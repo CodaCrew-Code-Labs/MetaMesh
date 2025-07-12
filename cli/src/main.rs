@@ -5,7 +5,10 @@ fn main() {
 
     println!("🌱 Seed ID: {}", identity.seed_id);
     println!("📝 Sentence: {}", identity.mnemonic);
-    println!("🔐 Private Key (base64): {}...", &identity.private_key[..30]);
+    println!(
+        "🔐 Private Key (base64): {}...",
+        &identity.private_key[..30]
+    );
     println!("🔓 Public Key (base64): {}...", &identity.public_key[..30]);
 
     println!("\n🔁 Recovering from sentence...");

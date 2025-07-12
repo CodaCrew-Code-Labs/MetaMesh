@@ -1,13 +1,13 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
-use sha2::{Digest, Sha256};
 use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Nonce,
 };
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StoredIdentity {
@@ -20,14 +20,14 @@ pub struct StoredIdentity {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct QueuedPacket {
-    pub packet_id: String,           // Unique ID (hash of packet)
-    pub packet_bytes: Vec<u8>,       // Serialized packet
-    pub packet_type: String,         // Packet type for display
-    pub created_at: u64,             // Timestamp
-    pub retry_count: u32,            // Number of send attempts
-    pub last_retry: u64,             // Last retry timestamp
-    pub max_retries: u32,            // Based on TTL
-    pub ack_received: bool,          // Acknowledgment status
+    pub packet_id: String,     // Unique ID (hash of packet)
+    pub packet_bytes: Vec<u8>, // Serialized packet
+    pub packet_type: String,   // Packet type for display
+    pub created_at: u64,       // Timestamp
+    pub retry_count: u32,      // Number of send attempts
+    pub last_retry: u64,       // Last retry timestamp
+    pub max_retries: u32,      // Based on TTL
+    pub ack_received: bool,    // Acknowledgment status
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,8 +90,9 @@ impl SecureStorage {
         let cipher = Aes256Gcm::new_from_slice(&self.identities_key)?;
         let nonce = Nonce::from_slice(&encrypted_data[..12]);
         let ciphertext = &encrypted_data[12..];
-        
-        let decrypted = cipher.decrypt(nonce, ciphertext)
+
+        let decrypted = cipher
+            .decrypt(nonce, ciphertext)
             .map_err(|e| format!("Identity decryption failed: {:?}", e))?;
         let storage: IdentityStorage = serde_json::from_slice(&decrypted)?;
         Ok(storage)
@@ -99,18 +100,19 @@ impl SecureStorage {
 
     fn save_identities(&self, storage: &IdentityStorage) -> Result<(), Box<dyn std::error::Error>> {
         let json_data = serde_json::to_vec_pretty(storage)?;
-        
+
         let cipher = Aes256Gcm::new_from_slice(&self.identities_key)?;
         let nonce_bytes: [u8; 12] = rand::random();
         let nonce = Nonce::from_slice(&nonce_bytes);
-        
-        let ciphertext = cipher.encrypt(nonce, json_data.as_ref())
+
+        let ciphertext = cipher
+            .encrypt(nonce, json_data.as_ref())
             .map_err(|e| format!("Identity encryption failed: {:?}", e))?;
-        
+
         let mut encrypted_data = Vec::new();
         encrypted_data.extend_from_slice(&nonce_bytes);
         encrypted_data.extend_from_slice(&ciphertext);
-        
+
         fs::write(&self.identities_path, encrypted_data)?;
         Ok(())
     }
@@ -132,8 +134,9 @@ impl SecureStorage {
         let cipher = Aes256Gcm::new_from_slice(&self.packets_key)?;
         let nonce = Nonce::from_slice(&encrypted_data[..12]);
         let ciphertext = &encrypted_data[12..];
-        
-        let decrypted = cipher.decrypt(nonce, ciphertext)
+
+        let decrypted = cipher
+            .decrypt(nonce, ciphertext)
             .map_err(|e| format!("Packet decryption failed: {:?}", e))?;
         let storage: PacketStorage = serde_json::from_slice(&decrypted)?;
         Ok(storage)
@@ -141,30 +144,39 @@ impl SecureStorage {
 
     fn save_packets(&self, storage: &PacketStorage) -> Result<(), Box<dyn std::error::Error>> {
         let json_data = serde_json::to_vec_pretty(storage)?;
-        
+
         let cipher = Aes256Gcm::new_from_slice(&self.packets_key)?;
         let nonce_bytes: [u8; 12] = rand::random();
         let nonce = Nonce::from_slice(&nonce_bytes);
-        
-        let ciphertext = cipher.encrypt(nonce, json_data.as_ref())
+
+        let ciphertext = cipher
+            .encrypt(nonce, json_data.as_ref())
             .map_err(|e| format!("Packet encryption failed: {:?}", e))?;
-        
+
         let mut encrypted_data = Vec::new();
         encrypted_data.extend_from_slice(&nonce_bytes);
         encrypted_data.extend_from_slice(&ciphertext);
-        
+
         fs::write(&self.packet_path, encrypted_data)?;
         Ok(())
     }
 
-    pub fn store_identity(&self, identity: StoredIdentity) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn store_identity(
+        &self,
+        identity: StoredIdentity,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut storage = self.load_identities()?;
-        storage.identities.insert(identity.seed_id.clone(), identity);
+        storage
+            .identities
+            .insert(identity.seed_id.clone(), identity);
         self.save_identities(&storage)?;
         Ok(())
     }
 
-    pub fn get_identity(&self, seed_id: &str) -> Result<Option<StoredIdentity>, Box<dyn std::error::Error>> {
+    pub fn get_identity(
+        &self,
+        seed_id: &str,
+    ) -> Result<Option<StoredIdentity>, Box<dyn std::error::Error>> {
         let storage = self.load_identities()?;
         Ok(storage.identities.get(seed_id).cloned())
     }
@@ -174,7 +186,10 @@ impl SecureStorage {
         Ok(storage.identities.values().cloned().collect())
     }
 
-    pub fn find_by_mnemonic(&self, mnemonic: &str) -> Result<Option<StoredIdentity>, Box<dyn std::error::Error>> {
+    pub fn find_by_mnemonic(
+        &self,
+        mnemonic: &str,
+    ) -> Result<Option<StoredIdentity>, Box<dyn std::error::Error>> {
         let storage = self.load_identities()?;
         for identity in storage.identities.values() {
             if identity.mnemonic == mnemonic {
@@ -184,7 +199,10 @@ impl SecureStorage {
         Ok(None)
     }
 
-    pub fn delete_identities(&self, seed_ids: &[String]) -> Result<(Vec<String>, Vec<String>), Box<dyn std::error::Error>> {
+    pub fn delete_identities(
+        &self,
+        seed_ids: &[String],
+    ) -> Result<(Vec<String>, Vec<String>), Box<dyn std::error::Error>> {
         let mut storage = self.load_identities()?;
         let mut deleted = Vec::new();
         let mut not_found = Vec::new();
@@ -221,7 +239,9 @@ impl SecureStorage {
 
     pub fn get_pending_packets(&self) -> Result<Vec<QueuedPacket>, Box<dyn std::error::Error>> {
         let storage = self.load_packets()?;
-        Ok(storage.packets.values()
+        Ok(storage
+            .packets
+            .values()
             .filter(|p| !p.ack_received)
             .cloned()
             .collect())
@@ -253,9 +273,9 @@ impl SecureStorage {
         let mut removed_count = 0;
 
         storage.packets.retain(|_, packet| {
-            let expired = packet.ack_received || 
-                         packet.retry_count >= packet.max_retries ||
-                         (current_time - packet.created_at) > 3600; // 1 hour max
+            let expired = packet.ack_received
+                || packet.retry_count >= packet.max_retries
+                || (current_time - packet.created_at) > 3600; // 1 hour max
             if expired {
                 removed_count += 1;
             }

@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 pub mod ble;
 pub use ble::{BleTransport, TransportError, TransportMonitor, METAMESH_BLE_UUID};
@@ -41,15 +41,15 @@ bitflags::bitflags! {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PacketHeader {
-    pub packet_type: PacketType,     // 1 byte
-    pub version: u8,                 // 1 byte
-    pub ttl: u8,                     // 1 byte
-    pub flags: PacketFlags,          // 2 bytes
-    pub from_seed: [u8; 16],         // 16 bytes
-    pub to_seed: [u8; 16],           // 16 bytes (0s if broadcast)
-    pub nonce: [u8; 8],              // 8 bytes (anti-replay)
-    pub payload_len: u32,            // 4 bytes
-    // Total: 49 bytes
+    pub packet_type: PacketType, // 1 byte
+    pub version: u8,             // 1 byte
+    pub ttl: u8,                 // 1 byte
+    pub flags: PacketFlags,      // 2 bytes
+    pub from_seed: [u8; 16],     // 16 bytes
+    pub to_seed: [u8; 16],       // 16 bytes (0s if broadcast)
+    pub nonce: [u8; 8],          // 8 bytes (anti-replay)
+    pub payload_len: u32,        // 4 bytes
+                                 // Total: 49 bytes
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,10 +61,10 @@ pub struct TLV {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MetaMeshPacket {
-    pub magic: [u8; 2],              // 2 bytes - "MM"
-    pub header: PacketHeader,        // 49 bytes
-    pub payload: Vec<TLV>,           // Variable
-    // Total: 51+ bytes
+    pub magic: [u8; 2],       // 2 bytes - "MM"
+    pub header: PacketHeader, // 49 bytes
+    pub payload: Vec<TLV>,    // Variable
+                              // Total: 51+ bytes
 }
 
 // Magic header constant

@@ -23,7 +23,7 @@ thiserror = "1.0"
 # Crypto dependencies
 pqcrypto-dilithium = "0.5"
 pqcrypto-traits = "0.3"
-blake3 = "1.5"
+blake3 = { version = "1.5", default-features = false }
 
 # Identity dependencies
 fake = "2.9"
@@ -34,9 +34,12 @@ btleplug = "0.11"
 bitflags = "2.4"
 
 # Utility dependencies
-base64 = "0.22"
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 hex = "0.4"
 rand = "0.8"
+
+# Embedded dependencies
+heapless = "0.8"
 
 [workspace.metadata.cross]
 # Cross-compilation configuration

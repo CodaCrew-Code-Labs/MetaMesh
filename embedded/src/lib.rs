@@ -1,24 +1,31 @@
 #![no_std]
-extern crate alloc;
-use alloc::{string::String, vec::Vec, format};
-use blake3;
-use base64::{Engine, engine::general_purpose};
 
-pub fn derive_seed_id_embedded(public_key_bytes: &[u8]) -> String {
-    let blake_hash = blake3::hash(public_key_bytes);
-    let short_id = &blake_hash.as_bytes()[..6];
-    format!("{}", u64::from_be_bytes({
-        let mut padded = [0u8; 8];
-        padded[2..].copy_from_slice(short_id);
-        padded
-    }))
+use base64::{engine::general_purpose, Engine as _};
+use heapless::String;
+
+#[derive(Debug)]
+pub struct EmbeddedIdentity {
+    pub seed_id: String<32>,
+    pub public_key: String<128>,
 }
 
-pub fn encode_base64_embedded(data: &[u8]) -> String {
-    general_purpose::STANDARD.encode(data)
-}
+pub fn generate_embedded_identity() -> EmbeddedIdentity {
+    // Simplified identity generation for embedded systems
+    let dummy_key = b"embedded_public_key_placeholder";
+    let hash = blake3::hash(dummy_key);
+    let hash_bytes = hash.as_bytes();
 
-pub fn sentence_to_entropy_embedded(sentence: &str) -> Vec<u8> {
-    let hash = blake3::hash(sentence.as_bytes());
-    hash.as_bytes()[..20].to_vec()
+    // Create truncated seed ID
+    let truncated = &hash_bytes[..12];
+    let seed_id_str = general_purpose::STANDARD.encode(truncated);
+    let seed_id = String::try_from(&seed_id_str[..16]).unwrap_or_else(|_| String::new());
+
+    // Create public key string
+    let public_key_str = general_purpose::STANDARD.encode(dummy_key);
+    let public_key = String::try_from(&public_key_str[..64]).unwrap_or_else(|_| String::new());
+
+    EmbeddedIdentity {
+        seed_id,
+        public_key,
+    }
 }

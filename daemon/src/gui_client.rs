@@ -1,88 +1,24 @@
 use std::process::Command;
-use std::thread;
-use std::time::Duration;
 
-pub mod metamesh {
-    tonic::include_proto!("metamesh");
-}
+fn main() {
+    println!("Starting MetaMesh GUI Client...");
 
-use metamesh::meta_mesh_service_client::MetaMeshServiceClient;
-use metamesh::*;
+    // Start the daemon in the background
+    let daemon_child = Command::new("./target/release/metamesh-daemon")
+        .args(["--daemon", "--port", "50051"])
+        .spawn()
+        .expect("Failed to start daemon");
 
-pub struct HeadlessClient {
-    server_url: String,
-}
+    println!("Daemon started with PID: {}", daemon_child.id());
 
-impl HeadlessClient {
-    pub fn new(server_url: &str) -> Self {
-        Self {
-            server_url: server_url.to_string(),
-        }
-    }
+    // Here you would start your GUI framework
+    // For now, just keep the process alive
+    println!("GUI would start here...");
 
-    pub async fn start_daemon_if_needed(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // Check if daemon is running
-        if self.health_check().await.is_ok() {
-            return Ok(());
-        }
+    // Wait for user input to shutdown
+    println!("Press Enter to shutdown...");
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
 
-        // Start daemon in background
-        Command::new("./metamesh-daemon")
-            .args(&["--daemon", "--port", "50051"])
-            .spawn()?;
-
-        // Wait for daemon to start
-        for _ in 0..30 {
-            thread::sleep(Duration::from_millis(100));
-            if self.health_check().await.is_ok() {
-                return Ok(());
-            }
-        }
-
-        Err("Failed to start daemon".into())
-    }
-
-    pub async fn health_check(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let mut client = MetaMeshServiceClient::connect(self.server_url.clone()).await?;
-        let response = client.health(HealthRequest {}).await?;
-        Ok(response.get_ref().status.clone())
-    }
-
-    pub async fn create_address(&self) -> Result<(String, String, String), Box<dyn std::error::Error>> {
-        let mut client = MetaMeshServiceClient::connect(self.server_url.clone()).await?;
-        let response = client.create_address(CreateAddressRequest {}).await?;
-        let addr = response.get_ref();
-        Ok((addr.seed_id.clone(), addr.public_key.clone(), addr.mnemonic.clone()))
-    }
-
-    pub async fn recover_keys(&self, mnemonic: &str) -> Result<(String, String, String), Box<dyn std::error::Error>> {
-        let mut client = MetaMeshServiceClient::connect(self.server_url.clone()).await?;
-        let response = client.recover_keys(RecoverKeysRequest { 
-            mnemonic: mnemonic.to_string() 
-        }).await?;
-        let keys = response.get_ref();
-        Ok((keys.seed_id.clone(), keys.public_key.clone(), keys.private_key.clone()))
-    }
-
-    pub async fn shutdown(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut client = MetaMeshServiceClient::connect(self.server_url.clone()).await?;
-        client.shutdown(ShutdownRequest {}).await?;
-        Ok(())
-    }
-}
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = HeadlessClient::new("http://127.0.0.1:50051");
-    
-    // Auto-start daemon if not running
-    client.start_daemon_if_needed().await?;
-    
-    // Example usage
-    println!("Creating new address...");
-    let (seed_id, _public_key, mnemonic) = client.create_address().await?;
-    println!("Seed ID: {}", seed_id);
-    println!("Mnemonic: {}", mnemonic);
-    
-    Ok(())
+    println!("Shutting down...");
 }

@@ -13,7 +13,7 @@ use metamesh::*;
 struct Args {
     #[arg(short, long, default_value = "http://127.0.0.1:50051")]
     server: String,
-    
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -36,13 +36,17 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    
+
     let mut client = MetaMeshServiceClient::connect(args.server).await?;
 
     match args.command {
         Commands::Health => {
             let response = client.health(HealthRequest {}).await?;
-            println!("Status: {}, Service: {}", response.get_ref().status, response.get_ref().service);
+            println!(
+                "Status: {}, Service: {}",
+                response.get_ref().status,
+                response.get_ref().service
+            );
         }
         Commands::CreateAddress => {
             let response = client.create_address(CreateAddressRequest {}).await?;
@@ -67,7 +71,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Commands::DeleteAddress { seed_ids } => {
-            let response = client.delete_address(DeleteAddressRequest { seed_ids }).await?;
+            let response = client
+                .delete_address(DeleteAddressRequest { seed_ids })
+                .await?;
             let result = response.get_ref();
             println!("Deleted: {} addresses", result.deleted_count);
             if !result.deleted_seed_ids.is_empty() {
@@ -78,7 +84,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Commands::DeleteAllAddresses => {
-            let response = client.delete_all_addresses(DeleteAllAddressesRequest {}).await?;
+            let response = client
+                .delete_all_addresses(DeleteAllAddressesRequest {})
+                .await?;
             let result = response.get_ref();
             println!("{}", result.message);
         }
@@ -88,52 +96,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Packet: {}", response.get_ref().packet_hex);
         }
         Commands::Deserialize { packet_hex } => {
-            let response = client.deserialize(DeserializeRequest { packet_hex }).await?;
+            let response = client
+                .deserialize(DeserializeRequest { packet_hex })
+                .await?;
             println!("{}", response.get_ref().analysis);
         }
         Commands::PendingPackets => {
             let response = client.pending_packets(PendingPacketsRequest {}).await?;
             let result = response.get_ref();
-            
+
             if result.total_packets == 0 {
                 println!("No pending packets");
             } else {
                 println!("📦 {} pending packets:", result.total_packets);
-                println!("");
+                println!();
                 for packet in &result.packets {
-                    println!("ID: {} | Type: {} | Retries: {}/{} | Created: {}", 
-                        packet.packet_id, 
+                    println!(
+                        "ID: {} | Type: {} | Retries: {}/{} | Created: {}",
+                        packet.packet_id,
                         packet.packet_type,
                         packet.retry_count,
                         packet.max_retries,
-                        packet.created_at);
+                        packet.created_at
+                    );
                 }
             }
         }
         Commands::ListApis => {
             println!("Available MetaMesh APIs:");
-            println!("");
+            println!();
             println!("📊 Status:");
             println!("  health                    - Check daemon health status");
-            println!("");
+            println!();
             println!("🔑 Address Management:");
             println!("  create-address            - Generate new identity with mnemonic");
             println!("  recover-keys <mnemonic>   - Recover identity from mnemonic phrase");
             println!("  list-addresses            - List all stored addresses");
-            println!("");
+            println!();
             println!("🗑️  Delete Operations:");
             println!("  delete-address <seed_ids> - Delete specific addresses (space-separated)");
             println!("  delete-all-addresses      - Delete all stored addresses");
-            println!("");
+            println!();
             println!("🔗 Transport:");
             println!("  ping-check <seed_id>      - Create MetaMesh ping packet");
             println!("  deserialize <packet_hex>  - Deserialize and analyze packet");
             println!("  pending-packets           - List queued packets awaiting delivery");
-            println!("");
+            println!();
             println!("⚙️  System:");
             println!("  list-apis                 - Show this API list");
             println!("  shutdown                  - Stop the daemon");
-            println!("");
+            println!();
             println!("Examples:");
             println!("  ./metamesh-client create-address");
             println!("  ./metamesh-client ping-check 123456789");
