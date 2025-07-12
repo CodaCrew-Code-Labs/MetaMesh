@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: linux-x64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: linux-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: macos-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: windows-x64
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Read version from VERSION file
+      id: version
+      run: |
+        if [ -f VERSION ]; then
+          VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        else
+          echo "version=0.1.0" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+    
+    - name: Install protoc (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+    
+    - name: Install protoc (macOS)
+      if: matrix.os == 'macos-latest'
+      run: brew install protobuf
+    
+    - name: Install protoc (Windows)
+      if: matrix.os == 'windows-latest'
+      run: choco install protoc
+    
+    - name: Install cross-compilation tools
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: sudo apt-get install -y gcc-aarch64-linux-gnu
+    
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+    
+    - name: Package (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        mkdir -p dist
+        cp target/${{ matrix.target }}/release/metamesh-daemon dist/ 2>/dev/null || true
+        cp target/${{ matrix.target }}/release/metamesh-client dist/ 2>/dev/null || true
+        tar -czf metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.tar.gz -C dist .
+    
+    - name: Package (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir dist
+        copy target\${{ matrix.target }}\release\metamesh-daemon.exe dist\ 2>nul || echo "daemon not found"
+        copy target\${{ matrix.target }}\release\metamesh-client.exe dist\ 2>nul || echo "client not found"
+        Compress-Archive -Path dist\* -DestinationPath metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.zip
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}
+        path: metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Read version from VERSION file
+      id: version
+      run: |
+        if [ -f VERSION ]; then
+          VERSION=$(cat VERSION | tr -d '\n\r')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        else
+          echo "version=0.1.0" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+    
+    - name: Delete existing release (if exists)
+      run: |
+        gh release delete v${{ steps.version.outputs.version }} --yes || echo "Release doesn't exist"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        name: MetaMesh v${{ steps.version.outputs.version }}
+        files: |
+          metamesh-linux-x64-v${{ steps.version.outputs.version }}/metamesh-linux-x64-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-linux-arm64-v${{ steps.version.outputs.version }}/metamesh-linux-arm64-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-macos-x64-v${{ steps.version.outputs.version }}/metamesh-macos-x64-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-macos-arm64-v${{ steps.version.outputs.version }}/metamesh-macos-arm64-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-windows-x64-v${{ steps.version.outputs.version }}/metamesh-windows-x64-v${{ steps.version.outputs.version }}.zip
+        generate_release_notes: true
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
