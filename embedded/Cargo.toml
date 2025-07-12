@@ -1,0 +1,12 @@
+[package]
+name = "metamesh-embedded"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# Lightweight versions for embedded
+blake3 = { workspace = true, default-features = false }
+base64 = { workspace = true, default-features = false, features = ["alloc"] }

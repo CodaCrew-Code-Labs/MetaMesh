@@ -1,0 +1,42 @@
+[package]
+name = "metamesh-daemon"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "metamesh-daemon"
+path = "src/main.rs"
+
+[[bin]]
+name = "metamesh-client"
+path = "src/client.rs"
+
+[[bin]]
+name = "metamesh-headless"
+path = "src/gui_client.rs"
+
+[dependencies]
+metamesh-identity = { path = "../common/identity" }
+metamesh-crypto = { path = "../common/crypto" }
+metamesh-utils = { path = "../common/utils" }
+metamesh-transport = { path = "../common/transport" }
+tokio = { version = "1.0", features = ["full"] }
+tonic = "0.10"
+prost = "0.12"
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+dirs = "5.0"
+serde_json = "1.0"
+sha2 = "0.10"
+aes-gcm = "0.10"
+rand = "0.8"
+hex = "0.4"
+postcard = { version = "1.0", features = ["alloc"] }
+
+[dev-dependencies]
+tempfile = "3.8"
+tokio-test = "0.4"
+
+[build-dependencies]
+tonic-build = "0.10"

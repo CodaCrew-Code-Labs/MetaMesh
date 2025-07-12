@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package metamesh;
+
+service MetaMeshService {
+    rpc Health(HealthRequest) returns (HealthResponse);
+    rpc CreateAddress(CreateAddressRequest) returns (CreateAddressResponse);
+    rpc RecoverKeys(RecoverKeysRequest) returns (RecoverKeysResponse);
+    rpc ListAddresses(ListAddressesRequest) returns (ListAddressesResponse);
+    rpc DeleteAddress(DeleteAddressRequest) returns (DeleteAddressResponse);
+    rpc DeleteAllAddresses(DeleteAllAddressesRequest) returns (DeleteAllAddressesResponse);
+    rpc PingCheck(PingCheckRequest) returns (PingCheckResponse);
+    rpc Deserialize(DeserializeRequest) returns (DeserializeResponse);
+    rpc PendingPackets(PendingPacketsRequest) returns (PendingPacketsResponse);
+    rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+    string status = 1;
+    string service = 2;
+}
+
+message CreateAddressRequest {}
+
+message CreateAddressResponse {
+    string seed_id = 1;
+    string public_key = 2;
+    string mnemonic = 3;
+}
+
+message RecoverKeysRequest {
+    string mnemonic = 1;
+}
+
+message RecoverKeysResponse {
+    string seed_id = 1;
+    string public_key = 2;
+    string private_key = 3;
+}
+
+message ShutdownRequest {}
+
+message ListAddressesRequest {}
+
+message ListAddressesResponse {
+    repeated AddressInfo addresses = 1;
+}
+
+message AddressInfo {
+    string seed_id = 1;
+    int64 created_at = 2;
+}
+
+message DeleteAddressRequest {
+    repeated string seed_ids = 1;
+}
+
+message DeleteAddressResponse {
+    int32 deleted_count = 1;
+    repeated string deleted_seed_ids = 2;
+    repeated string not_found_seed_ids = 3;
+}
+
+message DeleteAllAddressesRequest {}
+
+message DeleteAllAddressesResponse {
+    int32 deleted_count = 1;
+    string message = 2;
+}
+
+message PingCheckRequest {
+    string seed_id = 1;
+}
+
+message PingCheckResponse {
+    string message = 1;
+    string packet_hex = 2;
+}
+
+message DeserializeRequest {
+    string packet_hex = 1;
+}
+
+message DeserializeResponse {
+    string analysis = 1;
+}
+
+message PendingPacketsRequest {}
+
+message PendingPacketsResponse {
+    int32 total_packets = 1;
+    repeated PacketInfo packets = 2;
+}
+
+message PacketInfo {
+    string packet_id = 1;
+    string packet_type = 2;
+    int64 created_at = 3;
+    int32 retry_count = 4;
+    int32 max_retries = 5;
+}
+
+message ShutdownResponse {
+    string message = 1;
+}

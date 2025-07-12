@@ -1,0 +1,13 @@
+[package]
+name = "metamesh-identity"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+metamesh-crypto = { path = "../crypto" }
+metamesh-utils = { path = "../utils" }
+metamesh-entropy = { path = "../entropy" }
+pqcrypto-traits = { workspace = true }
+fake = { workspace = true }
+rand = { workspace = true }
+getrandom = { workspace = true }
