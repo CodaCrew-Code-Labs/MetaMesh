@@ -18,7 +18,8 @@ pre-build = [
 pre-build = [
     "apt-get update", 
     "apt-get install -y protobuf-compiler",
-    "apt-get install -y gcc-arm-linux-androideabi",
+    "apt-get install -y gcc-arm-linux-gnueabi",
+    "ln -sf /usr/bin/arm-linux-gnueabi-gcc /usr/bin/arm-linux-androideabi-gcc || true",
     "ln -sf /usr/bin/protoc /usr/local/bin/protoc || true",
 ]
 
