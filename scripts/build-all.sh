@@ -46,7 +46,6 @@ TARGETS=(
     "armv7-unknown-linux-gnueabihf"
     "aarch64-linux-android"
     "armv7-linux-androideabi"
-    "xtensa-esp32-espidf"
     "thumbv7em-none-eabihf"
 )
 
@@ -59,7 +58,6 @@ DESCRIPTIONS=(
     "Raspberry Pi ARMv7"
     "Android ARM64"
     "Android ARMv7"
-    "ESP32"
     "Arduino ARM Cortex-M4"
 )
 
@@ -107,8 +105,10 @@ for i in "${!TARGETS[@]}"; do
     
     start_time=$(date +%s)
     
-    # Determine build method based on target
+    # Determine build method and features based on target
     build_success=false
+    use_cross=false
+    no_ble=false
     
     case "$target" in
         "x86_64-apple-darwin"|"aarch64-apple-darwin")
@@ -126,7 +126,7 @@ for i in "${!TARGETS[@]}"; do
             fi
             ;;
         "x86_64-unknown-linux-gnu")
-            # Native Linux build (prefer cargo on Linux, cross elsewhere)
+            # Linux x64 - keep BLE, use cross if not on Linux
             if [[ "$OSTYPE" == "linux-gnu"* ]]; then
                 print_status "Using cargo for native Linux target: $target"
                 if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
@@ -135,7 +135,7 @@ for i in "${!TARGETS[@]}"; do
                     build_success=true
                 fi
             else
-                print_status "Using cross for Linux target: $target"
+                print_status "Using cross for Linux target: $target (with BLE)"
                 if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
                     echo "  $line"
                 done; then
@@ -144,7 +144,7 @@ for i in "${!TARGETS[@]}"; do
             fi
             ;;
         "x86_64-pc-windows-gnu")
-            # Windows build (prefer cargo on Windows, cross elsewhere)
+            # Windows - keep BLE, use cross if not on Windows
             if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
                 print_status "Using cargo for native Windows target: $target"
                 if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
@@ -153,7 +153,7 @@ for i in "${!TARGETS[@]}"; do
                     build_success=true
                 fi
             else
-                print_status "Using cross for Windows target: $target"
+                print_status "Using cross for Windows target: $target (with BLE)"
                 if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
                     echo "  $line"
                 done; then
@@ -162,9 +162,9 @@ for i in "${!TARGETS[@]}"; do
             fi
             ;;
         *)
-            # Use cross for all other cross-compilation targets
-            print_status "Using cross tool for $target"
-            if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+            # Cross-compilation targets - disable BLE to avoid D-Bus issues
+            print_status "Using cross tool for $target (without BLE)"
+            if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client --no-default-features 2>&1 | while IFS= read -r line; do
                 echo "  $line"
             done; then
                 build_success=true

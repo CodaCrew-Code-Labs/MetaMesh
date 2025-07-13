@@ -23,6 +23,7 @@ jobs:
             target: aarch64-unknown-linux-gnu
             name: linux-arm64
             use_cross: true
+            no_ble: true
           - os: macos-latest
             target: x86_64-apple-darwin
             name: macos-x64
@@ -36,18 +37,22 @@ jobs:
             target: armv7-unknown-linux-gnueabihf
             name: pi-armv7
             use_cross: true
+            no_ble: true
           - os: ubuntu-latest
             target: aarch64-linux-android
             name: android-arm64
             use_cross: true
+            no_ble: true
           - os: ubuntu-latest
             target: armv7-linux-androideabi
             name: android-armv7
             use_cross: true
+            no_ble: true
           - os: ubuntu-latest
             target: thumbv7em-none-eabihf
             name: embedded-arm
             use_cross: true
+            no_ble: true
 
     steps:
     - uses: actions/checkout@v4
@@ -69,7 +74,7 @@ jobs:
         targets: ${{ matrix.target }}
     
     - name: Install system dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.no_ble != true
       run: |
         sudo apt update
         sudo apt install -y \
@@ -79,6 +84,15 @@ jobs:
           libdbus-glib-1-dev \
           libudev-dev \
           libbluetooth-dev \
+          protobuf-compiler
+    
+    - name: Install basic dependencies (Ubuntu - no BLE)
+      if: matrix.os == 'ubuntu-latest' && matrix.no_ble == true
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          build-essential \
+          pkg-config \
           protobuf-compiler
     
     - name: Install protoc (macOS)
@@ -93,10 +107,13 @@ jobs:
       if: matrix.use_cross == true
       run: cargo install cross --git https://github.com/cross-rs/cross
     
-    - name: Build with cross
-      if: matrix.use_cross == true
-      run: cross build --release --target ${{ matrix.target }} || echo "Build failed for ${{ matrix.target }}"
-      continue-on-error: true
+    - name: Build with cross (no BLE)
+      if: matrix.use_cross == true && matrix.no_ble == true
+      run: cross build --release --target ${{ matrix.target }} --no-default-features
+    
+    - name: Build with cross (with BLE)
+      if: matrix.use_cross == true && matrix.no_ble != true
+      run: cross build --release --target ${{ matrix.target }}
     
     - name: Build with cargo
       if: matrix.use_cross != true
@@ -108,14 +125,7 @@ jobs:
         mkdir -p dist
         cp target/${{ matrix.target }}/release/metamesh-daemon dist/ 2>/dev/null || echo "daemon not found for ${{ matrix.target }}"
         cp target/${{ matrix.target }}/release/metamesh-client dist/ 2>/dev/null || echo "client not found for ${{ matrix.target }}"
-        if [ -f dist/metamesh-daemon ] || [ -f dist/metamesh-client ]; then
-          tar -czf metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.tar.gz -C dist .
-        else
-          echo "No binaries found for ${{ matrix.target }}, creating empty archive"
-          touch dist/README.txt
-          echo "Build failed for ${{ matrix.target }}" > dist/README.txt
-          tar -czf metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.tar.gz -C dist .
-        fi
+        tar -czf metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.tar.gz -C dist .
     
     - name: Package (Windows)
       if: matrix.os == 'windows-latest'

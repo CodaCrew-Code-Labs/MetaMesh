@@ -99,69 +99,83 @@ impl BleTransport {
     }
 
     fn is_bluetooth_available(&self) -> bool {
-        cfg!(any(
-            target_os = "android",
-            target_os = "ios",
-            target_os = "macos",
-            target_os = "linux",
-            target_os = "windows",
-            target_arch = "arm",    // Pi
-            target_arch = "xtensa"  // ESP32
-        ))
+        #[cfg(feature = "ble")]
+        {
+            cfg!(any(
+                target_os = "android",
+                target_os = "ios",
+                target_os = "macos",
+                target_os = "linux",
+                target_os = "windows",
+                target_arch = "arm",    // Pi
+                target_arch = "xtensa"  // ESP32
+            ))
+        }
+        #[cfg(not(feature = "ble"))]
+        {
+            false
+        }
     }
 
     async fn is_bluetooth_enabled(&self) -> bool {
-        // macOS - use system command as btleplug doesn't detect power state properly
-        #[cfg(target_os = "macos")]
+        #[cfg(feature = "ble")]
         {
-            use std::process::Command;
-            match Command::new("system_profiler")
-                .args(["SPBluetoothDataType"])
-                .output()
+            // macOS - use system command as btleplug doesn't detect power state properly
+            #[cfg(target_os = "macos")]
             {
-                Ok(output) => {
-                    let output_str = String::from_utf8_lossy(&output.stdout);
-                    output_str.contains("State: On") || output_str.contains("Discoverable: Yes")
-                }
-                Err(_) => false,
-            }
-        }
-
-        // Linux/Windows - use btleplug
-        #[cfg(any(target_os = "linux", target_os = "windows"))]
-        {
-            use btleplug::api::{Central, Manager as _};
-            use btleplug::platform::Manager;
-
-            match Manager::new().await {
-                Ok(manager) => match manager.adapters().await {
-                    Ok(adapters) => {
-                        if adapters.is_empty() {
-                            return false;
-                        }
-
-                        for adapter in adapters {
-                            match adapter
-                                .start_scan(btleplug::api::ScanFilter::default())
-                                .await
-                            {
-                                Ok(_) => {
-                                    let _ = adapter.stop_scan().await;
-                                    return true;
-                                }
-                                Err(_) => continue,
-                            }
-                        }
-                        false
+                use std::process::Command;
+                match Command::new("system_profiler")
+                    .args(["SPBluetoothDataType"])
+                    .output()
+                {
+                    Ok(output) => {
+                        let output_str = String::from_utf8_lossy(&output.stdout);
+                        output_str.contains("State: On") || output_str.contains("Discoverable: Yes")
                     }
                     Err(_) => false,
-                },
-                Err(_) => false,
+                }
+            }
+
+            // Linux/Windows - use btleplug
+            #[cfg(any(target_os = "linux", target_os = "windows"))]
+            {
+                use btleplug::api::{Central, Manager as _};
+                use btleplug::platform::Manager;
+
+                match Manager::new().await {
+                    Ok(manager) => match manager.adapters().await {
+                        Ok(adapters) => {
+                            if adapters.is_empty() {
+                                return false;
+                            }
+
+                            for adapter in adapters {
+                                match adapter
+                                    .start_scan(btleplug::api::ScanFilter::default())
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        let _ = adapter.stop_scan().await;
+                                        return true;
+                                    }
+                                    Err(_) => continue,
+                                }
+                            }
+                            false
+                        }
+                        Err(_) => false,
+                    },
+                    Err(_) => false,
+                }
+            }
+
+            // Other platforms - simplified for now
+            #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+            {
+                false
             }
         }
-
-        // Other platforms - simplified for now
-        #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+        #[cfg(not(feature = "ble"))]
         {
             false
         }
