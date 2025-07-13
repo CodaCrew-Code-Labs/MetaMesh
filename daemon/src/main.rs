@@ -85,7 +85,7 @@ async fn retry_pending_packets(
             storage.increment_retry_count(&packet.packet_id)?;
 
             for result in results {
-                println!("  {}", result);
+                println!("  {result}");
             }
         }
     }
@@ -93,7 +93,7 @@ async fn retry_pending_packets(
     // Clean up expired packets
     let removed = storage.remove_expired_packets()?;
     if removed > 0 {
-        println!("🗑️  Removed {} expired packets", removed);
+        println!("🗑️  Removed {removed} expired packets");
     }
 
     Ok(())
@@ -128,7 +128,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
         self.state
             .storage
             .store_identity(stored_identity)
-            .map_err(|e| Status::internal(format!("Storage error: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Storage error: {e}")))?;
 
         let response = CreateAddressResponse {
             seed_id: identity.seed_id,
@@ -167,7 +167,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
         self.state
             .storage
             .store_identity(stored_identity)
-            .map_err(|e| Status::internal(format!("Storage error: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Storage error: {e}")))?;
 
         let response = RecoverKeysResponse {
             seed_id: identity.seed_id,
@@ -194,7 +194,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
                 let response = ListAddressesResponse { addresses };
                 Ok(Response::new(response))
             }
-            Err(e) => Err(Status::internal(format!("Storage error: {}", e))),
+            Err(e) => Err(Status::internal(format!("Storage error: {e}"))),
         }
     }
 
@@ -217,7 +217,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
                 };
                 Ok(Response::new(response))
             }
-            Err(e) => Err(Status::internal(format!("Storage error: {}", e))),
+            Err(e) => Err(Status::internal(format!("Storage error: {e}"))),
         }
     }
 
@@ -229,11 +229,11 @@ impl MetaMeshService for MetaMeshServiceImpl {
             Ok(count) => {
                 let response = DeleteAllAddressesResponse {
                     deleted_count: count as i32,
-                    message: format!("Deleted {} addresses", count),
+                    message: format!("Deleted {count} addresses"),
                 };
                 Ok(Response::new(response))
             }
-            Err(e) => Err(Status::internal(format!("Storage error: {}", e))),
+            Err(e) => Err(Status::internal(format!("Storage error: {e}"))),
         }
     }
 
@@ -251,7 +251,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
         let identity = match self.state.storage.get_identity(&req.seed_id) {
             Ok(Some(identity)) => identity,
             Ok(None) => return Err(Status::not_found("Identity not found")),
-            Err(e) => return Err(Status::internal(format!("Storage error: {}", e))),
+            Err(e) => return Err(Status::internal(format!("Storage error: {e}"))),
         };
 
         // Convert seed_id to 16-byte array
@@ -282,7 +282,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
 
         // Serialize packet using postcard
         let packet_bytes = postcard::to_allocvec(&packet)
-            .map_err(|e| Status::internal(format!("Serialization error: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Serialization error: {e}")))?;
         let packet_hex = hex::encode(&packet_bytes);
 
         // Generate packet ID (hash of packet bytes)
@@ -305,7 +305,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
         self.state
             .storage
             .queue_packet(queued_packet)
-            .map_err(|e| Status::internal(format!("Queue error: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Queue error: {e}")))?;
 
         // Send to all available transports using the shared transport monitor
         let mut transport_monitor = self.state.transport_monitor.lock().await;
@@ -318,10 +318,10 @@ impl MetaMeshService for MetaMeshServiceImpl {
             req.seed_id,
             packet_bytes.len()
         );
-        message.push_str(&format!("Packet ID: {} (queued for retry)\n", packet_id));
+        message.push_str(&format!("Packet ID: {packet_id} (queued for retry)\n"));
         message.push_str("Transport results:\n");
         for result in send_results {
-            message.push_str(&format!("  {}\n", result));
+            message.push_str(&format!("  {result}\n"));
         }
 
         let response = PingCheckResponse {
@@ -344,11 +344,11 @@ impl MetaMeshService for MetaMeshServiceImpl {
 
         // Decode hex to bytes
         let packet_bytes = hex::decode(&req.packet_hex)
-            .map_err(|e| Status::invalid_argument(format!("Invalid hex: {}", e)))?;
+            .map_err(|e| Status::invalid_argument(format!("Invalid hex: {e}")))?;
 
         // Deserialize using postcard
         let packet: MetaMeshPacket = postcard::from_bytes(&packet_bytes)
-            .map_err(|e| Status::internal(format!("Deserialization error: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Deserialization error: {e}")))?;
 
         // Format analysis
         let magic_str = String::from_utf8_lossy(&packet.magic);
@@ -420,7 +420,7 @@ impl MetaMeshService for MetaMeshServiceImpl {
                 };
                 Ok(Response::new(response))
             }
-            Err(e) => Err(Status::internal(format!("Storage error: {}", e))),
+            Err(e) => Err(Status::internal(format!("Storage error: {e}"))),
         }
     }
 
@@ -448,7 +448,7 @@ async fn start_transport_monitor(storage: SecureStorage) -> Arc<Mutex<TransportM
     tokio::spawn(async move {
         let mut guard = monitor_clone.lock().await;
         if let Err(e) = guard.start().await {
-            println!("Transport monitor failed: {}", e);
+            println!("Transport monitor failed: {e}");
         }
     });
 
@@ -458,7 +458,7 @@ async fn start_transport_monitor(storage: SecureStorage) -> Arc<Mutex<TransportM
         loop {
             sleep(Duration::from_secs(300)).await; // 5 minutes
             if let Err(e) = retry_pending_packets(&storage, &monitor_retry).await {
-                println!("Retry failed: {}", e);
+                println!("Retry failed: {e}");
             }
         }
     });
@@ -486,7 +486,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("0.0.0.0:{}", args.port).parse()?;
     let service = MetaMeshServiceImpl::new(transport_monitor);
 
-    println!("🌐 gRPC daemon listening on {}", addr);
+    println!("🌐 gRPC daemon listening on {addr}");
     println!("✨ MetaMesh daemon ready!");
 
     Server::builder()

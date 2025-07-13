@@ -53,17 +53,17 @@ fn entropy_to_sentence(entropy: &[u8]) -> String {
             0 => {
                 let name: String = FirstName().fake_with_rng(&mut rng);
                 let city: String = CityName().fake_with_rng(&mut rng);
-                format!("The person named {} lives in {}", name, city)
+                format!("The person named {name} lives in {city}")
             }
             1 => {
                 let company: String = CompanyName().fake_with_rng(&mut rng);
                 let name: String = LastName().fake_with_rng(&mut rng);
-                format!("Mr {} works at {}", name, company)
+                format!("Mr {name} works at {company}")
             }
             _ => {
                 let street: String = StreetName().fake_with_rng(&mut rng);
                 let name: String = FirstName().fake_with_rng(&mut rng);
-                format!("{} walks down {} street", name, street)
+                format!("{name} walks down {street} street")
             }
         };
 

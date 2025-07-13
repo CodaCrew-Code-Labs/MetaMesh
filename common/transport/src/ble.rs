@@ -20,8 +20,8 @@ impl fmt::Display for TransportError {
                 write!(f, "Bluetooth not available on this platform")
             }
             TransportError::BluetoothNotEnabled => write!(f, "Bluetooth is not enabled"),
-            TransportError::ConnectionFailed(msg) => write!(f, "Connection failed: {}", msg),
-            TransportError::SendFailed(msg) => write!(f, "Send failed: {}", msg),
+            TransportError::ConnectionFailed(msg) => write!(f, "Connection failed: {msg}"),
+            TransportError::SendFailed(msg) => write!(f, "Send failed: {msg}"),
         }
     }
 }
@@ -57,7 +57,7 @@ impl BleTransport {
 
         self.enabled = true;
         self.last_status = true;
-        println!("✅ BLE: Listening on UUID {}", METAMESH_BLE_UUID);
+        println!("✅ BLE: Listening on UUID {METAMESH_BLE_UUID}");
 
         // Start advertising and scanning
         self.start_advertising().await?;
@@ -227,7 +227,7 @@ impl TransportMonitor {
         if self.ble_transport.is_enabled() {
             match self.ble_transport.send_packet(packet_bytes).await {
                 Ok(_) => results.push("BLE: Sent successfully".to_string()),
-                Err(e) => results.push(format!("BLE: Failed - {}", e)),
+                Err(e) => results.push(format!("BLE: Failed - {e}")),
             }
         } else {
             results.push("BLE: Not available".to_string());
@@ -252,7 +252,7 @@ impl TransportMonitor {
         match count {
             0 => println!("⚠️  0 transport mediums available"),
             1 => println!("✅ 1 transport medium available (BLE)"),
-            _ => println!("✅ {} transport mediums available", count),
+            _ => println!("✅ {count} transport mediums available"),
         }
     }
 }

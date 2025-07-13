@@ -93,7 +93,7 @@ impl SecureStorage {
 
         let decrypted = cipher
             .decrypt(nonce, ciphertext)
-            .map_err(|e| format!("Identity decryption failed: {:?}", e))?;
+            .map_err(|e| format!("Identity decryption failed: {e:?}"))?;
         let storage: IdentityStorage = serde_json::from_slice(&decrypted)?;
         Ok(storage)
     }
@@ -107,7 +107,7 @@ impl SecureStorage {
 
         let ciphertext = cipher
             .encrypt(nonce, json_data.as_ref())
-            .map_err(|e| format!("Identity encryption failed: {:?}", e))?;
+            .map_err(|e| format!("Identity encryption failed: {e:?}"))?;
 
         let mut encrypted_data = Vec::new();
         encrypted_data.extend_from_slice(&nonce_bytes);
@@ -137,7 +137,7 @@ impl SecureStorage {
 
         let decrypted = cipher
             .decrypt(nonce, ciphertext)
-            .map_err(|e| format!("Packet decryption failed: {:?}", e))?;
+            .map_err(|e| format!("Packet decryption failed: {e:?}"))?;
         let storage: PacketStorage = serde_json::from_slice(&decrypted)?;
         Ok(storage)
     }
@@ -151,7 +151,7 @@ impl SecureStorage {
 
         let ciphertext = cipher
             .encrypt(nonce, json_data.as_ref())
-            .map_err(|e| format!("Packet encryption failed: {:?}", e))?;
+            .map_err(|e| format!("Packet encryption failed: {e:?}"))?;
 
         let mut encrypted_data = Vec::new();
         encrypted_data.extend_from_slice(&nonce_bytes);
