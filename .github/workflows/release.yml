@@ -45,8 +45,8 @@ jobs:
             name: pi-armv7
             use_cross: true
           - os: ubuntu-latest
-            target: armv7-linux-androideabi
-            name: android-armv7
+            target: aarch64-linux-android
+            name: android-arm64
             use_cross: true
           
           # Embedded build (only embedded crate)
@@ -210,7 +210,7 @@ jobs:
           metamesh-linux-arm64-v${{ steps.version.outputs.version }}/metamesh-linux-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-windows-x64-v${{ steps.version.outputs.version }}/metamesh-windows-x64-v${{ steps.version.outputs.version }}.zip
           metamesh-pi-armv7-v${{ steps.version.outputs.version }}/metamesh-pi-armv7-v${{ steps.version.outputs.version }}.tar.gz
-          metamesh-android-armv7-v${{ steps.version.outputs.version }}/metamesh-android-armv7-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-android-arm64-v${{ steps.version.outputs.version }}/metamesh-android-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-embedded-arm-v${{ steps.version.outputs.version }}/metamesh-embedded-arm-v${{ steps.version.outputs.version }}.tar.gz
         generate_release_notes: true
         prerelease: false
