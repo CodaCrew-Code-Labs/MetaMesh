@@ -39,14 +39,10 @@ jobs:
             target: x86_64-pc-windows-msvc
             name: windows-x64
           
-          # ARM Linux builds (with BLE via direct HCI)
+          # ARM Linux build (Raspberry Pi)
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             name: pi-armv7
-            use_cross: true
-          - os: ubuntu-latest
-            target: aarch64-linux-android
-            name: android-arm64
             use_cross: true
           
           # Embedded build (only embedded crate)
@@ -210,7 +206,6 @@ jobs:
           metamesh-linux-arm64-v${{ steps.version.outputs.version }}/metamesh-linux-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-windows-x64-v${{ steps.version.outputs.version }}/metamesh-windows-x64-v${{ steps.version.outputs.version }}.zip
           metamesh-pi-armv7-v${{ steps.version.outputs.version }}/metamesh-pi-armv7-v${{ steps.version.outputs.version }}.tar.gz
-          metamesh-android-arm64-v${{ steps.version.outputs.version }}/metamesh-android-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-embedded-arm-v${{ steps.version.outputs.version }}/metamesh-embedded-arm-v${{ steps.version.outputs.version }}.tar.gz
         generate_release_notes: true
         prerelease: false
