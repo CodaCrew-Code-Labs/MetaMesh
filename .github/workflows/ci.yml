@@ -26,16 +26,21 @@ jobs:
           build-essential \
           pkg-config \
           libdbus-1-dev \
+          libdbus-glib-1-dev \
+          libudev-dev \
           libbluetooth-dev \
           protobuf-compiler
+        
+        # Set environment variables for pkg-config
+        echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
+        echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+
     
     - name: Check formatting
       run: cargo fmt --all -- --check
-      continue-on-error: true
     
     - name: Run clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
-      continue-on-error: true
     
     - name: Run tests
       run: cargo test --all-features
