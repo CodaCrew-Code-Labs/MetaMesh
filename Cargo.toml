@@ -31,7 +31,7 @@ getrandom = "0.2"
 
 # Transport dependencies
 btleplug = "0.11"
-bitflags = "2.4"
+bitflags = { version = "2.4", features = ["serde"] }
 
 # Utility dependencies
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
