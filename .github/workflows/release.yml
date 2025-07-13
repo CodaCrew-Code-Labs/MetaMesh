@@ -38,7 +38,7 @@ jobs:
             target: x86_64-pc-windows-msvc
             name: windows-x64
           
-          # ARM Linux builds
+          # ARM Linux builds (with BLE via direct HCI)
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             name: pi-armv7
@@ -78,8 +78,8 @@ jobs:
       if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
       run: brew install protobuf pkg-config
     
-    - name: Install dependencies (Linux)
-      if: matrix.os == 'ubuntu-latest' && matrix.embedded_only != true
+    - name: Install dependencies (Linux x64 with D-Bus BLE)
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
         sudo apt update
         sudo apt install -y \
@@ -90,6 +90,15 @@ jobs:
           libdbus-1-dev \
           libdbus-glib-1-dev \
           libudev-dev
+    
+    - name: Install dependencies (ARM Linux with direct HCI BLE)
+      if: matrix.os == 'ubuntu-latest' && matrix.use_cross == true && matrix.embedded_only != true
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          build-essential \
+          pkg-config \
+          protobuf-compiler
     
     - name: Install basic dependencies (Embedded)
       if: matrix.embedded_only == true

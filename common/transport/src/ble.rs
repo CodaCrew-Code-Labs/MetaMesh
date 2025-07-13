@@ -72,8 +72,8 @@ mod macos_ble {
     }
 }
 
-#[cfg(target_os = "linux")]
-mod linux_ble {
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod linux_x64_ble {
     use super::*;
 
     #[derive(Default)]
@@ -88,7 +88,7 @@ mod linux_ble {
         }
 
         pub async fn start_listener(&mut self) -> Result<(), TransportError> {
-            println!("🐧 Linux: Starting BlueZ D-Bus BLE listener");
+            println!("🐧 Linux x64: Starting BlueZ D-Bus BLE listener");
             self.enabled = true;
             self.last_status = true;
             println!("✅ BLE: Listening on UUID {METAMESH_BLE_UUID}");
@@ -105,7 +105,74 @@ mod linux_ble {
                     "BLE transport not enabled".to_string(),
                 ));
             }
-            println!("📡 Linux BLE: Sending {} byte packet", packet_bytes.len());
+            println!(
+                "📡 Linux x64 BLE: Sending {} byte packet",
+                packet_bytes.len()
+            );
+            Ok(())
+        }
+
+        pub fn is_enabled(&self) -> bool {
+            self.enabled
+        }
+    }
+}
+
+#[cfg(all(target_os = "linux", any(target_arch = "arm", target_arch = "aarch64")))]
+mod linux_arm_ble {
+    use super::*;
+
+    #[derive(Default)]
+    pub struct BleTransport {
+        enabled: bool,
+        last_status: bool,
+    }
+
+    impl BleTransport {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub async fn start_listener(&mut self) -> Result<(), TransportError> {
+            println!("🥧 Pi/ARM Linux: Starting direct HCI BLE listener (no D-Bus)");
+
+            // Use direct HCI socket access instead of D-Bus
+            // This avoids cross-compilation D-Bus issues
+            if self.check_hci_device().await {
+                self.enabled = true;
+                self.last_status = true;
+                println!("✅ BLE: Direct HCI access on UUID {METAMESH_BLE_UUID}");
+                Ok(())
+            } else {
+                Err(TransportError::BluetoothNotAvailable)
+            }
+        }
+
+        async fn check_hci_device(&self) -> bool {
+            // Check for /dev/hci0 or similar HCI devices
+            std::path::Path::new("/dev/hci0").exists()
+                || std::path::Path::new("/sys/class/bluetooth/hci0").exists()
+        }
+
+        pub async fn monitor_status(&mut self) -> bool {
+            if self.enabled {
+                // Re-check HCI device availability
+                self.last_status = self.check_hci_device().await;
+            }
+            self.enabled && self.last_status
+        }
+
+        pub async fn send_packet(&self, packet_bytes: &[u8]) -> Result<(), TransportError> {
+            if !self.enabled {
+                return Err(TransportError::SendFailed(
+                    "BLE transport not enabled".to_string(),
+                ));
+            }
+            println!(
+                "📡 Pi/ARM BLE: Sending {} byte packet via HCI",
+                packet_bytes.len()
+            );
+            // TODO: Implement direct HCI socket communication
             Ok(())
         }
 
@@ -252,8 +319,10 @@ mod embedded_ble {
 pub use android_ble::*;
 #[cfg(all(target_arch = "arm", target_os = "none"))]
 pub use embedded_ble::*;
-#[cfg(target_os = "linux")]
-pub use linux_ble::*;
+#[cfg(all(target_os = "linux", any(target_arch = "arm", target_arch = "aarch64")))]
+pub use linux_arm_ble::*;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+pub use linux_x64_ble::*;
 #[cfg(target_os = "macos")]
 pub use macos_ble::*;
 #[cfg(target_os = "windows")]
