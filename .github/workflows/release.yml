@@ -45,12 +45,8 @@ jobs:
             name: android-armv7
             use_cross: true
           - os: ubuntu-latest
-            target: xtensa-esp32-espidf
-            name: esp32
-            use_cross: true
-          - os: ubuntu-latest
             target: thumbv7em-none-eabihf
-            name: arduino-arm
+            name: embedded-arm
             use_cross: true
 
     steps:
@@ -175,8 +171,7 @@ jobs:
           metamesh-pi-armv7-v${{ steps.version.outputs.version }}/metamesh-pi-armv7-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-android-arm64-v${{ steps.version.outputs.version }}/metamesh-android-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-android-armv7-v${{ steps.version.outputs.version }}/metamesh-android-armv7-v${{ steps.version.outputs.version }}.tar.gz
-          metamesh-esp32-v${{ steps.version.outputs.version }}/metamesh-esp32-v${{ steps.version.outputs.version }}.tar.gz
-          metamesh-arduino-arm-v${{ steps.version.outputs.version }}/metamesh-arduino-arm-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-embedded-arm-v${{ steps.version.outputs.version }}/metamesh-embedded-arm-v${{ steps.version.outputs.version }}.tar.gz
         generate_release_notes: true
         prerelease: false
       env:
