@@ -16,46 +16,60 @@ jobs:
     strategy:
       matrix:
         include:
+          # macOS native builds
+          - os: macos-13
+            target: x86_64-apple-darwin
+            name: macos-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: macos-arm64
+          
+          # Linux native builds
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             name: linux-x64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             name: linux-arm64
-            use_cross: true
-            no_ble: true
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            name: macos-x64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            name: macos-arm64
+            arch: aarch64
+          
+          # Windows native build
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             name: windows-x64
+          
+          # ARM Linux builds (native on ARM runners)
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             name: pi-armv7
-            use_cross: true
-            no_ble: true
-          - os: ubuntu-latest
-            target: aarch64-linux-android
-            name: android-arm64
-            use_cross: true
-            no_ble: true
+            arch: armv7
           - os: ubuntu-latest
             target: armv7-linux-androideabi
             name: android-armv7
-            use_cross: true
-            no_ble: true
+            arch: armv7
           - os: ubuntu-latest
-            target: thumbv7em-none-eabihf
+            target: thumbv7m-none-eabi
             name: embedded-arm
-            use_cross: true
-            no_ble: true
+            arch: armv7
 
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Set up ARM64 runner
+      if: matrix.arch == 'aarch64'
+      uses: uraimo/run-on-arch-action@v2
+      with:
+        arch: aarch64
+        distro: ubuntu22.04
+        run: echo "ARM64 runner ready"
+    
+    - name: Set up ARMv7 runner
+      if: matrix.arch == 'armv7'
+      uses: uraimo/run-on-arch-action@v2
+      with:
+        arch: armv7
+        distro: ubuntu22.04
+        run: echo "ARMv7 runner ready"
     
     - name: Read version from VERSION file
       id: version
@@ -73,58 +87,36 @@ jobs:
       with:
         targets: ${{ matrix.target }}
     
-    - name: Install system dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest' && matrix.no_ble != true
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
+      run: brew install protobuf pkg-config
+    
+    - name: Install dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt update
         sudo apt install -y \
           build-essential \
           pkg-config \
+          protobuf-compiler \
+          libbluetooth-dev \
           libdbus-1-dev \
           libdbus-glib-1-dev \
-          libudev-dev \
-          libbluetooth-dev \
-          protobuf-compiler
+          libudev-dev
     
-    - name: Install basic dependencies (Ubuntu - no BLE)
-      if: matrix.os == 'ubuntu-latest' && matrix.no_ble == true
-      run: |
-        sudo apt update
-        sudo apt install -y \
-          build-essential \
-          pkg-config \
-          protobuf-compiler
-    
-    - name: Install protoc (macOS)
-      if: matrix.os == 'macos-latest'
-      run: brew install protobuf
-    
-    - name: Install protoc (Windows)
+    - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: choco install protoc
     
-    - name: Install cross
-      if: matrix.use_cross == true
-      run: cargo install cross --git https://github.com/cross-rs/cross
-    
-    - name: Build with cross (no BLE)
-      if: matrix.use_cross == true && matrix.no_ble == true
-      run: cross build --release --target ${{ matrix.target }} --no-default-features
-    
-    - name: Build with cross (with BLE)
-      if: matrix.use_cross == true && matrix.no_ble != true
-      run: cross build --release --target ${{ matrix.target }}
-    
-    - name: Build with cargo
-      if: matrix.use_cross != true
+    - name: Build
       run: cargo build --release --target ${{ matrix.target }}
     
     - name: Package (Unix)
       if: matrix.os != 'windows-latest'
       run: |
         mkdir -p dist
-        cp target/${{ matrix.target }}/release/metamesh-daemon dist/ 2>/dev/null || echo "daemon not found for ${{ matrix.target }}"
-        cp target/${{ matrix.target }}/release/metamesh-client dist/ 2>/dev/null || echo "client not found for ${{ matrix.target }}"
+        cp target/${{ matrix.target }}/release/metamesh-daemon dist/ 2>/dev/null || echo "daemon not found"
+        cp target/${{ matrix.target }}/release/metamesh-client dist/ 2>/dev/null || echo "client not found"
         tar -czf metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.tar.gz -C dist .
     
     - name: Package (Windows)
@@ -173,13 +165,12 @@ jobs:
         tag_name: v${{ steps.version.outputs.version }}
         name: MetaMesh v${{ steps.version.outputs.version }}
         files: |
-          metamesh-linux-x64-v${{ steps.version.outputs.version }}/metamesh-linux-x64-v${{ steps.version.outputs.version }}.tar.gz
-          metamesh-linux-arm64-v${{ steps.version.outputs.version }}/metamesh-linux-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-macos-x64-v${{ steps.version.outputs.version }}/metamesh-macos-x64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-macos-arm64-v${{ steps.version.outputs.version }}/metamesh-macos-arm64-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-linux-x64-v${{ steps.version.outputs.version }}/metamesh-linux-x64-v${{ steps.version.outputs.version }}.tar.gz
+          metamesh-linux-arm64-v${{ steps.version.outputs.version }}/metamesh-linux-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-windows-x64-v${{ steps.version.outputs.version }}/metamesh-windows-x64-v${{ steps.version.outputs.version }}.zip
           metamesh-pi-armv7-v${{ steps.version.outputs.version }}/metamesh-pi-armv7-v${{ steps.version.outputs.version }}.tar.gz
-          metamesh-android-arm64-v${{ steps.version.outputs.version }}/metamesh-android-arm64-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-android-armv7-v${{ steps.version.outputs.version }}/metamesh-android-armv7-v${{ steps.version.outputs.version }}.tar.gz
           metamesh-embedded-arm-v${{ steps.version.outputs.version }}/metamesh-embedded-arm-v${{ steps.version.outputs.version }}.tar.gz
         generate_release_notes: true

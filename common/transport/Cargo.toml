@@ -5,10 +5,25 @@ edition = "2021"
 
 [features]
 default = ["ble"]
-ble = ["btleplug"]
+ble = []
 
 [dependencies]
 serde = { workspace = true }
 tokio = { workspace = true }
 bitflags = { workspace = true }
-btleplug = { workspace = true, optional = true }
+
+# Platform-specific BLE dependencies
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.9"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+btleplug = { workspace = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+btleplug = { workspace = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
+nb = "1.0"
