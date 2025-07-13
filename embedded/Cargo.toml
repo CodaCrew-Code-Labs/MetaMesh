@@ -7,3 +7,11 @@ edition = "2021"
 base64 = { workspace = true }
 blake3 = { workspace = true }
 heapless = { workspace = true }
+nb = "1.0"
+embedded-hal = "1.0"
+
+# No std dependencies only
+[dependencies.getrandom]
+version = "0.2"
+default-features = false
+features = ["custom"]

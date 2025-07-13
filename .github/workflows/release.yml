@@ -31,45 +31,32 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             name: linux-arm64
-            arch: aarch64
+            use_cross: true
           
           # Windows native build
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             name: windows-x64
           
-          # ARM Linux builds (native on ARM runners)
+          # ARM Linux builds
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             name: pi-armv7
-            arch: armv7
+            use_cross: true
           - os: ubuntu-latest
             target: armv7-linux-androideabi
             name: android-armv7
-            arch: armv7
+            use_cross: true
+          
+          # Embedded build (only embedded crate)
           - os: ubuntu-latest
             target: thumbv7m-none-eabi
             name: embedded-arm
-            arch: armv7
+            use_cross: true
+            embedded_only: true
 
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up ARM64 runner
-      if: matrix.arch == 'aarch64'
-      uses: uraimo/run-on-arch-action@v2
-      with:
-        arch: aarch64
-        distro: ubuntu22.04
-        run: echo "ARM64 runner ready"
-    
-    - name: Set up ARMv7 runner
-      if: matrix.arch == 'armv7'
-      uses: uraimo/run-on-arch-action@v2
-      with:
-        arch: armv7
-        distro: ubuntu22.04
-        run: echo "ARMv7 runner ready"
     
     - name: Read version from VERSION file
       id: version
@@ -92,7 +79,7 @@ jobs:
       run: brew install protobuf pkg-config
     
     - name: Install dependencies (Linux)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.embedded_only != true
       run: |
         sudo apt update
         sudo apt install -y \
@@ -104,19 +91,43 @@ jobs:
           libdbus-glib-1-dev \
           libudev-dev
     
+    - name: Install basic dependencies (Embedded)
+      if: matrix.embedded_only == true
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential
+    
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
       run: choco install protoc
     
-    - name: Build
+    - name: Install cross
+      if: matrix.use_cross == true
+      run: cargo install cross --git https://github.com/cross-rs/cross
+    
+    - name: Build embedded only
+      if: matrix.embedded_only == true
+      run: cross build --release --target ${{ matrix.target }} -p metamesh-embedded
+    
+    - name: Build with cross
+      if: matrix.use_cross == true && matrix.embedded_only != true
+      run: cross build --release --target ${{ matrix.target }}
+    
+    - name: Build with cargo
+      if: matrix.use_cross != true
       run: cargo build --release --target ${{ matrix.target }}
     
     - name: Package (Unix)
       if: matrix.os != 'windows-latest'
       run: |
         mkdir -p dist
-        cp target/${{ matrix.target }}/release/metamesh-daemon dist/ 2>/dev/null || echo "daemon not found"
-        cp target/${{ matrix.target }}/release/metamesh-client dist/ 2>/dev/null || echo "client not found"
+        if [ "${{ matrix.embedded_only }}" = "true" ]; then
+          cp target/${{ matrix.target }}/release/libmetamesh_embedded.rlib dist/ 2>/dev/null || echo "embedded lib not found"
+          echo "Embedded library for ${{ matrix.target }}" > dist/README.txt
+        else
+          cp target/${{ matrix.target }}/release/metamesh-daemon dist/ 2>/dev/null || echo "daemon not found"
+          cp target/${{ matrix.target }}/release/metamesh-client dist/ 2>/dev/null || echo "client not found"
+        fi
         tar -czf metamesh-${{ matrix.name }}-v${{ steps.version.outputs.version }}.tar.gz -C dist .
     
     - name: Package (Windows)
