@@ -20,6 +20,7 @@ pre-build = [
     "which protoc || echo 'protoc not found in PATH'",
     "protoc --version || echo 'protoc version check failed'",
 ]
+
 [target.armv7-linux-androideabi.env]
 PROTOC = "/usr/bin/protoc"
 
@@ -32,5 +33,6 @@ pre-build = [
     "which protoc || echo 'protoc not found in PATH'",
     "protoc --version || echo 'protoc version check failed'",
 ]
+
 [target.armv7-unknown-linux-gnueabihf.env]
 PROTOC = "/usr/bin/protoc"
