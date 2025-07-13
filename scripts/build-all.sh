@@ -59,6 +59,15 @@ DESCRIPTIONS=(
     "ARM Cortex-M4 (Embedded)"
 )
 
+# Install cross tool for problematic targets
+print_status "Installing cross tool for cross-compilation..."
+if ! command -v cross &> /dev/null; then
+    cargo install cross --git https://github.com/cross-rs/cross
+    print_success "Cross tool installed"
+else
+    print_success "Cross tool already available"
+fi
+
 # Install all targets
 for i in "${!TARGETS[@]}"; do
     target="${TARGETS[$i]}"
@@ -94,10 +103,31 @@ for i in "${!TARGETS[@]}"; do
     
     start_time=$(date +%s)
     
-    # Build daemon and client
-    if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
-        echo "  $line"
-    done; then
+    # Determine build method based on target
+    build_success=false
+    
+    case "$target" in
+        "aarch64-unknown-linux-gnu"|"aarch64-linux-android"|"armv7-linux-androideabi"|"thumbv7em-none-eabihf")
+            # Use cross for problematic cross-compilation targets
+            print_status "Using cross tool for $target"
+            if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+                echo "  $line"
+            done; then
+                build_success=true
+            fi
+            ;;
+        *)
+            # Use regular cargo for native and simple targets
+            print_status "Using cargo for $target"
+            if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+                echo "  $line"
+            done; then
+                build_success=true
+            fi
+            ;;
+    esac
+    
+    if $build_success; then
         end_time=$(date +%s)
         duration=$((end_time - start_time))
         print_success "Build completed for $target in ${duration}s"

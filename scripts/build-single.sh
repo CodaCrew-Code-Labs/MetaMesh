@@ -43,6 +43,17 @@ TARGET=$1
 print_status "Building MetaMesh for target: $TARGET"
 echo "=========================================="
 
+# Install cross tool if needed for problematic targets
+case "$TARGET" in
+    "aarch64-unknown-linux-gnu"|"aarch64-linux-android"|"armv7-linux-androideabi"|"thumbv7em-none-eabihf")
+        if ! command -v cross &> /dev/null; then
+            print_status "Installing cross tool for cross-compilation..."
+            cargo install cross --git https://github.com/cross-rs/cross
+            print_success "Cross tool installed"
+        fi
+        ;;
+esac
+
 # Install target
 print_status "Installing target: $TARGET"
 if rustup target add "$TARGET" 2>/dev/null; then
@@ -55,21 +66,53 @@ fi
 start_time=$(date +%s)
 print_status "Starting build..."
 
-# Build with detailed output
-if cargo build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
-    # Filter and format cargo output
-    if [[ "$line" == *"Compiling"* ]]; then
-        echo -e "${YELLOW}📦${NC} $line"
-    elif [[ "$line" == *"Finished"* ]]; then
-        echo -e "${GREEN}✅${NC} $line"
-    elif [[ "$line" == *"error"* ]]; then
-        echo -e "${RED}❌${NC} $line"
-    elif [[ "$line" == *"warning"* ]]; then
-        echo -e "${YELLOW}⚠️${NC} $line"
-    else
-        echo "   $line"
-    fi
-done; then
+# Determine build method based on target
+build_success=false
+
+case "$TARGET" in
+    "aarch64-unknown-linux-gnu"|"aarch64-linux-android"|"armv7-linux-androideabi"|"thumbv7em-none-eabihf")
+        # Use cross for problematic cross-compilation targets
+        print_status "Using cross tool for $TARGET"
+        if cross build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+            # Filter and format cross output
+            if [[ "$line" == *"Compiling"* ]]; then
+                echo -e "${YELLOW}📦${NC} $line"
+            elif [[ "$line" == *"Finished"* ]]; then
+                echo -e "${GREEN}✅${NC} $line"
+            elif [[ "$line" == *"error"* ]]; then
+                echo -e "${RED}❌${NC} $line"
+            elif [[ "$line" == *"warning"* ]]; then
+                echo -e "${YELLOW}⚠️${NC} $line"
+            else
+                echo "   $line"
+            fi
+        done; then
+            build_success=true
+        fi
+        ;;
+    *)
+        # Use regular cargo for native and simple targets
+        print_status "Using cargo for $TARGET"
+        if cargo build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+            # Filter and format cargo output
+            if [[ "$line" == *"Compiling"* ]]; then
+                echo -e "${YELLOW}📦${NC} $line"
+            elif [[ "$line" == *"Finished"* ]]; then
+                echo -e "${GREEN}✅${NC} $line"
+            elif [[ "$line" == *"error"* ]]; then
+                echo -e "${RED}❌${NC} $line"
+            elif [[ "$line" == *"warning"* ]]; then
+                echo -e "${YELLOW}⚠️${NC} $line"
+            else
+                echo "   $line"
+            fi
+        done; then
+            build_success=true
+        fi
+        ;;
+esac
+
+if $build_success; then
     end_time=$(date +%s)
     duration=$((end_time - start_time))
     print_success "Build completed in ${duration}s"
