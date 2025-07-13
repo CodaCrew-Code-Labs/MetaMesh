@@ -13,7 +13,6 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -56,9 +55,6 @@ jobs:
             name: embedded-arm
             use_cross: true
             embedded_only: true
-
-    outputs:
-      build-success: ${{ steps.build-result.outputs.success }}
 
     steps:
     - uses: actions/checkout@v4
@@ -119,7 +115,7 @@ jobs:
       if: matrix.use_cross == true
       run: cargo install cross --git https://github.com/cross-rs/cross
     
-    - name: Set up protoc for cross-compilation
+    - name: Set up environment for cross-compilation
       if: matrix.use_cross == true && matrix.embedded_only != true
       run: |
         # Download and install protoc for cross-compilation
@@ -128,7 +124,11 @@ jobs:
         unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d protoc
         sudo cp protoc/bin/protoc /usr/local/bin/
         sudo chmod +x /usr/local/bin/protoc
+        
+        # Set environment variables for cross-compilation
         echo "PROTOC=/usr/local/bin/protoc" >> $GITHUB_ENV
+        echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+        echo "CROSS_CONTAINER_IN_CONTAINER=true" >> $GITHUB_ENV
     
     - name: Build embedded only
       if: matrix.embedded_only == true
@@ -138,15 +138,13 @@ jobs:
       if: matrix.use_cross == true && matrix.embedded_only != true
       env:
         PROTOC: /usr/local/bin/protoc
+        PKG_CONFIG_ALLOW_CROSS: 1
+        CROSS_CONTAINER_IN_CONTAINER: true
       run: cross build --release --target ${{ matrix.target }}
     
     - name: Build with cargo
       if: matrix.use_cross != true
       run: cargo build --release --target ${{ matrix.target }}
-    
-    - name: Set build result
-      id: build-result
-      run: echo "success=true" >> $GITHUB_OUTPUT
     
     - name: Package (Unix)
       if: matrix.os != 'windows-latest'
