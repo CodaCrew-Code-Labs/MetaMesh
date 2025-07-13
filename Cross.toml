@@ -17,12 +17,8 @@ pre-build = [
 pre-build = [
     "apt-get update", 
     "apt-get install -y protobuf-compiler",
-    "which protoc || echo 'protoc not found in PATH'",
-    "protoc --version || echo 'protoc version check failed'",
+    "ln -sf /usr/bin/protoc /usr/local/bin/protoc || true",
 ]
-
-[target.armv7-linux-androideabi.env]
-PROTOC = "/usr/bin/protoc"
 
 [target.armv7-unknown-linux-gnueabihf]
 pre-build = [
@@ -30,9 +26,5 @@ pre-build = [
     "apt-get update",
     "apt-get install -y protobuf-compiler",
     "apt-get install -y libdbus-1-dev:armhf pkg-config",
-    "which protoc || echo 'protoc not found in PATH'",
-    "protoc --version || echo 'protoc version check failed'",
+    "ln -sf /usr/bin/protoc /usr/local/bin/protoc || true",
 ]
-
-[target.armv7-unknown-linux-gnueabihf.env]
-PROTOC = "/usr/bin/protoc"
