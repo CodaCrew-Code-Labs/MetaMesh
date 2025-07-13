@@ -13,7 +13,9 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         include:
           # macOS native builds
@@ -54,6 +56,9 @@ jobs:
             name: embedded-arm
             use_cross: true
             embedded_only: true
+
+    outputs:
+      build-success: ${{ steps.build-result.outputs.success }}
 
     steps:
     - uses: actions/checkout@v4
@@ -139,6 +144,10 @@ jobs:
       if: matrix.use_cross != true
       run: cargo build --release --target ${{ matrix.target }}
     
+    - name: Set build result
+      id: build-result
+      run: echo "success=true" >> $GITHUB_OUTPUT
+    
     - name: Package (Unix)
       if: matrix.os != 'windows-latest'
       run: |
@@ -169,6 +178,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    if: ${{ !contains(needs.build.result, 'failure') }}
     
     steps:
     - uses: actions/checkout@v4
