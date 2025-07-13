@@ -105,12 +105,25 @@ jobs:
       if: matrix.use_cross == true
       run: cargo install cross --git https://github.com/cross-rs/cross
     
+    - name: Set up protoc for cross-compilation
+      if: matrix.use_cross == true && matrix.embedded_only != true
+      run: |
+        # Download and install protoc for cross-compilation
+        PROTOC_VERSION=21.12
+        curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
+        unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d protoc
+        sudo cp protoc/bin/protoc /usr/local/bin/
+        sudo chmod +x /usr/local/bin/protoc
+        echo "PROTOC=/usr/local/bin/protoc" >> $GITHUB_ENV
+    
     - name: Build embedded only
       if: matrix.embedded_only == true
       run: cross build --release --target ${{ matrix.target }} -p metamesh-embedded
     
     - name: Build with cross
       if: matrix.use_cross == true && matrix.embedded_only != true
+      env:
+        PROTOC: /usr/local/bin/protoc
       run: cross build --release --target ${{ matrix.target }}
     
     - name: Build with cargo
