@@ -26,28 +26,28 @@ enum Commands {
     /// Generate new identity with mnemonic
     CreateAddress,
     /// Recover identity from mnemonic phrase
-    RecoverKeys { 
+    RecoverKeys {
         /// Mnemonic phrase to recover from
-        mnemonic: String 
+        mnemonic: String,
     },
     /// List all stored addresses
     ListAddresses,
     /// Delete specific addresses
-    DeleteAddress { 
+    DeleteAddress {
         /// Space-separated seed IDs to delete
-        seed_ids: Vec<String> 
+        seed_ids: Vec<String>,
     },
     /// Delete all stored addresses
     DeleteAllAddresses,
     /// Create MetaMesh ping packet
-    PingCheck { 
+    PingCheck {
         /// Seed ID to ping from
-        seed_id: String 
+        seed_id: String,
     },
     /// Deserialize and analyze packet
-    Deserialize { 
+    Deserialize {
         /// Hex-encoded packet data
-        packet_hex: String 
+        packet_hex: String,
     },
     /// List queued packets awaiting delivery
     PendingPackets,

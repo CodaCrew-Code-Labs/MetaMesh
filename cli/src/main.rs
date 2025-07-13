@@ -15,9 +15,9 @@ enum Commands {
     /// Generate a new cryptographic identity
     Generate,
     /// Recover identity from mnemonic phrase
-    Recover { 
+    Recover {
         /// Mnemonic phrase to recover from
-        mnemonic: String 
+        mnemonic: String,
     },
 }
 
@@ -27,7 +27,7 @@ fn main() {
     match args.command {
         Commands::Generate => {
             let identity = generate_seed_identity();
-            
+
             println!("🆔 New MetaMesh Identity Generated");
             println!("================================");
             println!("Seed ID: {}", identity.seed_id);
@@ -37,9 +37,9 @@ fn main() {
         }
         Commands::Recover { mnemonic } => {
             println!("🔄 Recovering identity from mnemonic...");
-            
+
             let recovered = recover_from_mnemonic(&mnemonic);
-            
+
             println!("✅ Identity Recovered Successfully");
             println!("=================================");
             println!("Seed ID: {}", recovered.seed_id);
