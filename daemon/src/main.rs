@@ -45,6 +45,7 @@ impl AppState {
 #[derive(Parser)]
 #[command(name = "metamesh-daemon")]
 #[command(about = "MetaMesh gRPC daemon service")]
+#[command(version)]
 struct Args {
     #[arg(short, long, default_value = "50051")]
     port: u16,

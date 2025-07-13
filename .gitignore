@@ -1,16 +1,15 @@
 # Rust
-target/
+/target/
 Cargo.lock
-
-# Build artifacts
-dist/
-coverage/
+**/*.rs.bk
+*.pdb
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -18,3 +17,18 @@ Thumbs.db
 
 # Logs
 *.log
+
+# MetaMesh specific
+/storage/
+/data/
+*.db
+*.sqlite
+
+# Build artifacts
+/dist/
+*.tar.gz
+*.zip
+
+# Temporary files
+/tmp/
+.tmp/

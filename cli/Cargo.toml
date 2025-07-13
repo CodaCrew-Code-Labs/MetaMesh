@@ -2,6 +2,7 @@
 name = "metamesh-cli"
 version = "0.1.0"
 edition = "2021"
+description = "MetaMesh command-line interface"
 
 [[bin]]
 name = "metamesh"
@@ -9,3 +10,4 @@ path = "src/main.rs"
 
 [dependencies]
 metamesh-identity = { path = "../common/identity" }
+clap = { workspace = true }
