@@ -27,14 +27,16 @@ if [ $# -eq 0 ]; then
     echo "Usage: $0 <target>"
     echo ""
     echo "Available targets:"
-    echo "  x86_64-unknown-linux-gnu     - Linux x64"
-    echo "  aarch64-unknown-linux-gnu    - Linux ARM64"
-    echo "  x86_64-apple-darwin          - macOS x64 (Intel)"
-    echo "  aarch64-apple-darwin         - macOS ARM64 (Apple Silicon)"
-    echo "  x86_64-pc-windows-gnu        - Windows x64"
-    echo "  aarch64-linux-android        - Android ARM64"
-    echo "  armv7-linux-androideabi      - Android ARMv7"
-    echo "  thumbv7em-none-eabihf         - ARM Cortex-M4 (Embedded)"
+    echo "  x86_64-unknown-linux-gnu      - Linux x64"
+    echo "  aarch64-unknown-linux-gnu     - Linux ARM64"
+    echo "  x86_64-apple-darwin           - macOS x64 (Intel)"
+    echo "  aarch64-apple-darwin          - macOS ARM64 (Apple Silicon)"
+    echo "  x86_64-pc-windows-gnu         - Windows x64"
+    echo "  armv7-unknown-linux-gnueabihf - Raspberry Pi ARMv7"
+    echo "  aarch64-linux-android         - Android ARM64"
+    echo "  armv7-linux-androideabi       - Android ARMv7"
+    echo "  xtensa-esp32-espidf           - ESP32"
+    echo "  thumbv7em-none-eabihf          - Arduino ARM Cortex-M4"
     exit 1
 fi
 
@@ -43,9 +45,37 @@ TARGET=$1
 print_status "Building MetaMesh for target: $TARGET"
 echo "=========================================="
 
-# Install cross tool if needed for problematic targets
+# Install cross tool if needed for cross-compilation targets
 case "$TARGET" in
-    "aarch64-unknown-linux-gnu"|"aarch64-linux-android"|"armv7-linux-androideabi"|"thumbv7em-none-eabihf")
+    "x86_64-apple-darwin"|"aarch64-apple-darwin")
+        # Native macOS builds - no cross needed if on macOS
+        if [[ "$OSTYPE" != "darwin"* ]]; then
+            print_error "macOS targets can only be built on macOS"
+            exit 1
+        fi
+        ;;
+    "x86_64-unknown-linux-gnu")
+        # Native Linux build - use cross if not on Linux
+        if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+            if ! command -v cross &> /dev/null; then
+                print_status "Installing cross tool for cross-compilation..."
+                cargo install cross --git https://github.com/cross-rs/cross
+                print_success "Cross tool installed"
+            fi
+        fi
+        ;;
+    "x86_64-pc-windows-gnu")
+        # Windows build - use cross if not on Windows
+        if [[ "$OSTYPE" != "msys" && "$OSTYPE" != "cygwin" ]]; then
+            if ! command -v cross &> /dev/null; then
+                print_status "Installing cross tool for cross-compilation..."
+                cargo install cross --git https://github.com/cross-rs/cross
+                print_success "Cross tool installed"
+            fi
+        fi
+        ;;
+    *)
+        # All other targets need cross
         if ! command -v cross &> /dev/null; then
             print_status "Installing cross tool for cross-compilation..."
             cargo install cross --git https://github.com/cross-rs/cross
@@ -66,15 +96,15 @@ fi
 start_time=$(date +%s)
 print_status "Starting build..."
 
-# Determine build method based on target
+# Determine build method based on target and host OS
 build_success=false
 
 case "$TARGET" in
-    "aarch64-unknown-linux-gnu"|"aarch64-linux-android"|"armv7-linux-androideabi"|"thumbv7em-none-eabihf")
-        # Use cross for problematic cross-compilation targets
-        print_status "Using cross tool for $TARGET"
-        if cross build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
-            # Filter and format cross output
+    "x86_64-apple-darwin"|"aarch64-apple-darwin")
+        # Native macOS builds
+        print_status "Using cargo for native macOS target: $TARGET"
+        if cargo build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+            # Filter and format cargo output
             if [[ "$line" == *"Compiling"* ]]; then
                 echo -e "${YELLOW}📦${NC} $line"
             elif [[ "$line" == *"Finished"* ]]; then
@@ -90,11 +120,87 @@ case "$TARGET" in
             build_success=true
         fi
         ;;
+    "x86_64-unknown-linux-gnu")
+        # Linux build - native if on Linux, cross otherwise
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            print_status "Using cargo for native Linux target: $TARGET"
+            if cargo build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+                if [[ "$line" == *"Compiling"* ]]; then
+                    echo -e "${YELLOW}📦${NC} $line"
+                elif [[ "$line" == *"Finished"* ]]; then
+                    echo -e "${GREEN}✅${NC} $line"
+                elif [[ "$line" == *"error"* ]]; then
+                    echo -e "${RED}❌${NC} $line"
+                elif [[ "$line" == *"warning"* ]]; then
+                    echo -e "${YELLOW}⚠️${NC} $line"
+                else
+                    echo "   $line"
+                fi
+            done; then
+                build_success=true
+            fi
+        else
+            print_status "Using cross for Linux target: $TARGET"
+            if cross build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+                if [[ "$line" == *"Compiling"* ]]; then
+                    echo -e "${YELLOW}📦${NC} $line"
+                elif [[ "$line" == *"Finished"* ]]; then
+                    echo -e "${GREEN}✅${NC} $line"
+                elif [[ "$line" == *"error"* ]]; then
+                    echo -e "${RED}❌${NC} $line"
+                elif [[ "$line" == *"warning"* ]]; then
+                    echo -e "${YELLOW}⚠️${NC} $line"
+                else
+                    echo "   $line"
+                fi
+            done; then
+                build_success=true
+            fi
+        fi
+        ;;
+    "x86_64-pc-windows-gnu")
+        # Windows build - native if on Windows, cross otherwise
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+            print_status "Using cargo for native Windows target: $TARGET"
+            if cargo build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+                if [[ "$line" == *"Compiling"* ]]; then
+                    echo -e "${YELLOW}📦${NC} $line"
+                elif [[ "$line" == *"Finished"* ]]; then
+                    echo -e "${GREEN}✅${NC} $line"
+                elif [[ "$line" == *"error"* ]]; then
+                    echo -e "${RED}❌${NC} $line"
+                elif [[ "$line" == *"warning"* ]]; then
+                    echo -e "${YELLOW}⚠️${NC} $line"
+                else
+                    echo "   $line"
+                fi
+            done; then
+                build_success=true
+            fi
+        else
+            print_status "Using cross for Windows target: $TARGET"
+            if cross build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+                if [[ "$line" == *"Compiling"* ]]; then
+                    echo -e "${YELLOW}📦${NC} $line"
+                elif [[ "$line" == *"Finished"* ]]; then
+                    echo -e "${GREEN}✅${NC} $line"
+                elif [[ "$line" == *"error"* ]]; then
+                    echo -e "${RED}❌${NC} $line"
+                elif [[ "$line" == *"warning"* ]]; then
+                    echo -e "${YELLOW}⚠️${NC} $line"
+                else
+                    echo "   $line"
+                fi
+            done; then
+                build_success=true
+            fi
+        fi
+        ;;
     *)
-        # Use regular cargo for native and simple targets
-        print_status "Using cargo for $TARGET"
-        if cargo build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
-            # Filter and format cargo output
+        # Use cross for all other cross-compilation targets
+        print_status "Using cross tool for $TARGET"
+        if cross build --release --target "$TARGET" --bin metamesh-daemon --bin metamesh-client -v 2>&1 | while IFS= read -r line; do
+            # Filter and format cross output
             if [[ "$line" == *"Compiling"* ]]; then
                 echo -e "${YELLOW}📦${NC} $line"
             elif [[ "$line" == *"Finished"* ]]; then

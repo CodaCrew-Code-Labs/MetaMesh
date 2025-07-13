@@ -43,8 +43,10 @@ TARGETS=(
     "x86_64-apple-darwin"
     "aarch64-apple-darwin"
     "x86_64-pc-windows-gnu"
+    "armv7-unknown-linux-gnueabihf"
     "aarch64-linux-android"
     "armv7-linux-androideabi"
+    "xtensa-esp32-espidf"
     "thumbv7em-none-eabihf"
 )
 
@@ -54,9 +56,11 @@ DESCRIPTIONS=(
     "macOS x64 (Intel)"
     "macOS ARM64 (Apple Silicon)"
     "Windows x64"
+    "Raspberry Pi ARMv7"
     "Android ARM64"
     "Android ARMv7"
-    "ARM Cortex-M4 (Embedded)"
+    "ESP32"
+    "Arduino ARM Cortex-M4"
 )
 
 # Install cross tool for problematic targets
@@ -107,19 +111,60 @@ for i in "${!TARGETS[@]}"; do
     build_success=false
     
     case "$target" in
-        "aarch64-unknown-linux-gnu"|"aarch64-linux-android"|"armv7-linux-androideabi"|"thumbv7em-none-eabihf")
-            # Use cross for problematic cross-compilation targets
-            print_status "Using cross tool for $target"
-            if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
-                echo "  $line"
-            done; then
-                build_success=true
+        "x86_64-apple-darwin"|"aarch64-apple-darwin")
+            # Native macOS builds (only work on macOS)
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                print_status "Using cargo for native macOS target: $target"
+                if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+                    echo "  $line"
+                done; then
+                    build_success=true
+                fi
+            else
+                print_warning "Skipping macOS target $target (not running on macOS)"
+                build_success=false
+            fi
+            ;;
+        "x86_64-unknown-linux-gnu")
+            # Native Linux build (prefer cargo on Linux, cross elsewhere)
+            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                print_status "Using cargo for native Linux target: $target"
+                if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+                    echo "  $line"
+                done; then
+                    build_success=true
+                fi
+            else
+                print_status "Using cross for Linux target: $target"
+                if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+                    echo "  $line"
+                done; then
+                    build_success=true
+                fi
+            fi
+            ;;
+        "x86_64-pc-windows-gnu")
+            # Windows build (prefer cargo on Windows, cross elsewhere)
+            if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+                print_status "Using cargo for native Windows target: $target"
+                if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+                    echo "  $line"
+                done; then
+                    build_success=true
+                fi
+            else
+                print_status "Using cross for Windows target: $target"
+                if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+                    echo "  $line"
+                done; then
+                    build_success=true
+                fi
             fi
             ;;
         *)
-            # Use regular cargo for native and simple targets
-            print_status "Using cargo for $target"
-            if cargo build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
+            # Use cross for all other cross-compilation targets
+            print_status "Using cross tool for $target"
+            if cross build --release --target "$target" --bin metamesh-daemon --bin metamesh-client 2>&1 | while IFS= read -r line; do
                 echo "  $line"
             done; then
                 build_success=true
